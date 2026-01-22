@@ -31,32 +31,35 @@ def main():
             else:
                 st.error("Fichier et problématique requis.")
 
-    # --- ÉTAPE 2 : SÉLECTION (Scaffolding) ---
+   
+    # --- ÉTAPE 2 : SÉLECTION ---
     if st.session_state.get('step') == 'selection':
         st.header("2. Propositions de l'IA")
-        props = st.session_state['proposals']
-        keys = ['prop1', 'prop2', 'prop3']
+        props_list = st.session_state['proposals'] # C'est maintenant une LISTE
 
-        cols = st.columns(3)
-        for i, key in enumerate(keys):
-            if key in props:
-                with cols[i]:
-                    st.info(f"**{props[key]['titre']}**")
-                    st.write(props[key]['justification'])
+        # Affichage dynamique des colonnes selon le nombre de propositions reçues
+        cols = st.columns(len(props_list))
+        for i, prop in enumerate(props_list):
+            with cols[i]:
+                st.info(f"**{prop.get('titre', 'Sans titre')}**")
+                st.write(prop.get('justification', 'Pas de justification fournie.'))
 
-        choix = st.radio("Sélectionnez la meilleure option :", options=keys, 
-                         format_func=lambda x: props[x].get('titre', x))
+        # Sélection sécurisée : on passe l'objet complet au radio
+        choix_obj = st.radio(
+            "Quelle visualisation souhaitez-vous générer ?",
+            options=props_list,
+            format_func=lambda x: x.get('titre', 'Visualisation')
+        )
 
-        if st.button("Générer la visualisation"):
+        if st.button("Générer la visualisation sélectionnée"):
             df = st.session_state['df']
-            with st.spinner("Codage en cours..."):
-                desc = f"{props[choix]['titre']} : {props[choix]['justification']}"
-                code = orchestrator.generate_code(desc, df.columns.tolist(), len(df))
+            with st.spinner("Rédaction du code..."):
+                desc_precise = f"{choix_obj['titre']} : {choix_obj['justification']}"
+                code = orchestrator.generate_code(desc_precise, df.columns.tolist(), len(df))
                 st.session_state['generated_code'] = code
-                st.session_state['step'] = 'viz'
-
+                st.session_state['step'] = 'vis'
     # --- ÉTAPE 3 : RENDU & EXPORT PNG ---
-    if st.session_state.get('step') == 'viz':
+    if st.session_state.get('step') == 'vis':
         st.header("3. Visualisation Finale")
         df = st.session_state['df']
         clean_code = st.session_state['generated_code'].replace("```python", "").replace("```", "").strip()
